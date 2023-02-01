@@ -1,0 +1,47 @@
+version: '2.4'
+services:
+  zookeeper:
+    build: containers/zookeeper
+    image: metron-bro-plugin-kafka_zookeeper:latest
+  kafka-1:
+    build: containers/kafka
+    image: metron-bro-plugin-kafka_kafka:latest
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://kafka-1:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9092
+  kafka-2:
+    build: containers/kafka
+    image: metron-bro-plugin-kafka_kafka:latest
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_LISTENERS=PLAINTEXT://kafka-2:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:9092
+  zeek:
+    build:
+      context: containers/zeek
+      args:
+        ZEEK_VERSION: "3.2.1"
+        LIBRDKAFKA_VERSION: "1.4.2"
+    image: metron-bro-plugin-kafka_zeek:latest
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+      kafka-1:
+        condition: service_healthy
+      kafka-2:
+        condition: service_healthy
+    volumes:
+      - "${DATA_PATH}:/root/data"
+      - "${TEST_OUTPUT_PATH}:/root/test_output"
+      - "${PLUGIN_ROOT_DIR}:/root/code"
+      - "${OUR_SCRIPTS_PATH}:/root/built_in_scripts"
+    tty: true
